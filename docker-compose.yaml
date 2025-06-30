@@ -1,0 +1,363 @@
+name: demo
+
+services:
+  cardano-node:
+    # https://github.com/cardano-scaling/hydra/blob/master/demo/docker-compose.yaml
+    image: ghcr.io/intersectmbo/cardano-node:10.2
+    volumes:
+      - ./devnet:/devnet
+    environment:
+      - CARDANO_BLOCK_PRODUCER=true
+      - CARDANO_SOCKET_PATH=/devnet/node.socket # used by cardano-node
+      - CARDANO_NODE_SOCKET_PATH=/devnet/node.socket # used by cardano-cli
+    command:
+      [ "run"
+      , "--config", "/devnet/cardano-node.json"
+      , "--topology", "/devnet/topology.json"
+      , "--database-path", "/devnet/db"
+      , "--shelley-kes-key", "/devnet/kes.skey"
+      , "--shelley-vrf-key", "/devnet/vrf.skey"
+      , "--shelley-operational-certificate", "/devnet/opcert.cert"
+      , "--byron-delegation-certificate", "/devnet/byron-delegation.cert"
+      , "--byron-signing-key", "/devnet/byron-delegate.key"
+      ]
+    healthcheck:
+      test: [ "CMD-SHELL", "(</dev/tcp/localhost/3001) && echo OK && exit 0 || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+
+  hydra-node-1:
+    # NOTE: Make sure to use the same image in ./seed-devnet.sh
+    image: ghcr.io/cardano-scaling/hydra-node:0.21.0
+    build:
+      context: ../
+      target: hydra-node
+    volumes:
+      - .:/keys:ro
+      - ./devnet:/devnet
+    ports:
+      - "4001:4001"
+      - "5001:5001"
+    command:
+      [ "--node-id", "1"
+      , "--api-host", "0.0.0.0"
+      , "--listen", "172.16.238.10:5001"
+      , "--monitoring-port", "6001"
+      , "--peer", "172.16.238.20:5001"
+      , "--peer", "172.16.238.30:5001"
+      , "--hydra-scripts-tx-id", "${HYDRA_SCRIPTS_TX_ID}"
+      , "--hydra-signing-key", "/keys/alice.sk"
+      , "--hydra-verification-key", "/keys/bob.vk"
+      , "--hydra-verification-key", "/keys/carol.vk"
+      , "--cardano-signing-key", "/devnet/credentials/alice.sk"
+      , "--cardano-verification-key", "/devnet/credentials/bob.vk"
+      , "--cardano-verification-key", "/devnet/credentials/carol.vk"
+      , "--ledger-protocol-parameters", "/devnet/protocol-parameters.json"
+      , "--testnet-magic", "42"
+      , "--node-socket", "/devnet/node.socket"
+      , "--persistence-dir", "/devnet/persistence/alice"
+      , "--contestation-period", "3s"
+      ]
+    networks:
+      hydra_net:
+        ipv4_address: 172.16.238.10
+    restart: always
+
+  hydra-node-2:
+    # NOTE: Make sure to use the same image in ./seed-devnet.sh
+    image: ghcr.io/cardano-scaling/hydra-node:0.21.0
+    build:
+      context: ../
+      target: hydra-node
+    volumes:
+      - .:/keys:ro
+      - ./devnet:/devnet
+    ports:
+      - "4002:4001"
+      - "5002:5001"
+    command:
+      [ "--node-id", "2"
+      , "--api-host", "0.0.0.0"
+      , "--listen", "172.16.238.20:5001"
+      , "--monitoring-port", "6001"
+      , "--peer", "172.16.238.10:5001"
+      , "--peer", "172.16.238.30:5001"
+      , "--hydra-scripts-tx-id", "${HYDRA_SCRIPTS_TX_ID}"
+      , "--hydra-signing-key", "/keys/bob.sk"
+      , "--hydra-verification-key", "/keys/alice.vk"
+      , "--hydra-verification-key", "/keys/carol.vk"
+      , "--cardano-signing-key", "/devnet/credentials/bob.sk"
+      , "--cardano-verification-key", "/devnet/credentials/alice.vk"
+      , "--cardano-verification-key", "/devnet/credentials/carol.vk"
+      , "--ledger-protocol-parameters", "/devnet/protocol-parameters.json"
+      , "--testnet-magic", "42"
+      , "--node-socket", "/devnet/node.socket"
+      , "--persistence-dir", "/devnet/persistence/bob"
+      , "--contestation-period", "3s"
+      ]
+    networks:
+      hydra_net:
+        ipv4_address: 172.16.238.20
+    restart: always
+
+  hydra-node-3:
+    # NOTE: Make sure to use the same image in ./seed-devnet.sh
+    image: ghcr.io/cardano-scaling/hydra-node:0.21.0
+    build:
+      context: ../
+      target: hydra-node
+    volumes:
+      - .:/keys:ro
+      - ./devnet:/devnet
+    ports:
+      - "4003:4001"
+      - "5003:5001"
+    command:
+      [ "--node-id", "3"
+      , "--api-host", "0.0.0.0"
+      , "--listen", "172.16.238.30:5001"
+      , "--monitoring-port", "6001"
+      , "--peer", "172.16.238.10:5001"
+      , "--peer", "172.16.238.20:5001"
+      , "--hydra-scripts-tx-id", "${HYDRA_SCRIPTS_TX_ID}"
+      , "--hydra-signing-key", "/keys/carol.sk"
+      , "--hydra-verification-key", "/keys/alice.vk"
+      , "--hydra-verification-key", "/keys/bob.vk"
+      , "--cardano-signing-key", "/devnet/credentials/carol.sk"
+      , "--cardano-verification-key", "/devnet/credentials/alice.vk"
+      , "--cardano-verification-key", "/devnet/credentials/bob.vk"
+      , "--ledger-protocol-parameters", "/devnet/protocol-parameters.json"
+      , "--testnet-magic", "42"
+      , "--node-socket", "/devnet/node.socket"
+      , "--persistence-dir", "/devnet/persistence/carol"
+      , "--contestation-period", "3s"
+      ]
+    networks:
+      hydra_net:
+        ipv4_address: 172.16.238.30
+    restart: always
+
+  hydra-tui-1:
+    image: ghcr.io/cardano-scaling/hydra-tui:0.21.0
+    build:
+       context: ../
+       target: hydra-tui
+    command:
+      [ "--connect", "172.16.238.10:4001"
+      , "--node-socket", "/devnet/node.socket"
+      , "--testnet-magic", "42"
+      , "--cardano-signing-key", "/devnet/credentials/alice-funds.sk"
+      ]
+    volumes:
+      - ./devnet:/devnet
+    networks:
+      hydra_net:
+        ipv4_address: 172.16.238.11
+
+  hydra-tui-2:
+    image: ghcr.io/cardano-scaling/hydra-tui:0.21.0
+    build:
+       context: ../
+       target: hydra-tui
+    command:
+      [ "--connect", "172.16.238.20:4001"
+      , "--node-socket", "/devnet/node.socket"
+      , "--testnet-magic", "42"
+      , "--cardano-signing-key", "/devnet/credentials/bob-funds.sk"
+      ]
+    volumes:
+      - ./devnet:/devnet
+    networks:
+      hydra_net:
+        ipv4_address: 172.16.238.21
+
+  hydra-tui-3:
+    image: ghcr.io/cardano-scaling/hydra-tui:0.21.0
+    build:
+       context: ../
+       target: hydra-tui
+    command:
+      [ "--connect", "172.16.238.30:4001"
+      , "--node-socket", "/devnet/node.socket"
+      , "--testnet-magic", "42"
+      , "--cardano-signing-key", "/devnet/credentials/carol-funds.sk"
+      ]
+    volumes:
+      - ./devnet:/devnet
+    networks:
+      hydra_net:
+        ipv4_address: 172.16.238.31
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      hydra_net:
+        ipv4_address: 172.16.238.5
+
+  postgres:
+    # used by cardano-db-sync & blockfrost-ryo
+    image: postgres:17.2-alpine
+    environment:
+      - POSTGRES_LOGGING=true
+      - POSTGRES_DB_FILE=/run/secrets/postgres_db
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - POSTGRES_USER_FILE=/run/secrets/postgres_user
+    secrets:
+      - postgres_password
+      - postgres_user
+      - postgres_db
+    ports:
+      - ${POSTGRES_PORT:-5432}:5432
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: ${POSTGRES_ARGS:--c maintenance_work_mem=1GB -c max_parallel_maintenance_workers=4}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+    networks:
+      - hydra_net
+
+  cardano-db-sync:
+    # https://github.com/IntersectMBO/cardano-db-sync/blob/master/docker-compose.yml
+    image: ghcr.io/intersectmbo/cardano-db-sync:13.6.0.5
+    environment:
+      # For a custom network, a config file is likely required, passed via DB_SYNC_CONFIG
+      - DB_SYNC_CONFIG=${DB_SYNC_CONFIG:-/dbsync-config/devnet-config.yaml}
+      - DISABLE_LEDGER=${DISABLE_LEDGER:-}
+      - NETWORK=${NETWORK:-private}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - RESTORE_SNAPSHOT=${RESTORE_SNAPSHOT:-}
+      - RESTORE_RECREATE_DB=N
+      - EXTRA_DB_SYNC_ARGS=${EXTRA_DB_SYNC_ARGS:-}
+    depends_on:
+      cardano-node:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    secrets:
+      - postgres_password
+      - postgres_user
+      - postgres_db
+    volumes:
+      - db-sync-data:/var/lib/cexplorer
+      - ./devnet:/node-ipc # Mount the devnet directory (containing the socket) to /ipc
+      - ./dbsync-config:/dbsync-config
+    restart: on-failure
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+    networks:
+      - hydra_net
+
+  blockfrost-ryo:
+    # https://github.com/blockfrost/blockfrost-backend-ryo/tree/master?tab=readme-ov-file#docker
+    image: blockfrost/backend-ryo:latest
+    environment:
+      - NODE_ENV=custom
+      - BLOCKFROST_CONFIG_SERVER_LISTEN_ADDRESS=0.0.0.0
+      # - PGPASSWORD=
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./blockfrost-config:/app/config
+    networks:
+      - hydra_net
+
+  ogmios:
+    # https://github.com/CardanoSolutions/ogmios/blob/master/docker-compose.yml
+    image: cardanosolutions/ogmios:latest
+    restart: on-failure
+    command: [ "--host", "0.0.0.0", "--node-socket", "/ipc/node.socket", "--node-config", "/config/cardano-node.json" ]
+    volumes:
+      - ./devnet:/config
+      - ./devnet:/ipc
+      # - ./devnet/db:/db
+    ports:
+      - ${OGMIOS_PORT:-1337}:1337
+    
+  # mesh-app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.mesh
+  #   ports:
+  #     - "3003:3000"
+  #   depends_on:
+  #     - hydra-node-1
+  #   networks:
+  #     - hydra_net
+
+  kupo:
+    image: cardanosolutions/kupo:latest
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "400k"
+        max-file: "20"
+    depends_on:
+      cardano-node:
+        condition: service_healthy
+    ports:
+      - ${KUPO_PORT:-1442}:1442
+    command:
+      [
+        "--node-socket", "/devnet/node.socket",
+        "--node-config", "/devnet/cardano-node.json",
+        "--since", "${KUPO_SINCE:-origin}",
+        "--match", "${KUPO_MATCH:-*}",
+        "--workdir", "/db",
+        "--host", "0.0.0.0",
+        "--port", "1442"
+      ]
+    volumes:
+      - ./devnet:/devnet
+      - db-kupo:/db
+    restart: on-failure
+    networks:
+      - hydra_net
+
+networks:
+  hydra_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/24
+          gateway: 172.16.238.1
+
+volumes:
+  db-sync-data:
+  postgres:
+  db-kupo:
+
+secrets:
+  postgres_db:
+    file: ./dbsync-config/secrets/postgres_db
+  postgres_password:
+    file: ./dbsync-config/secrets/postgres_password
+  postgres_user:
+    file: ./dbsync-config/secrets/postgres_user

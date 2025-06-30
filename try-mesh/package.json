@@ -1,0 +1,8 @@
+{
+  "name": "try-mesh",
+  "dependencies": {
+    "@meshsdk/configs": "file:/home/dunght/github/mesh/packages/configs",
+    "@meshsdk/core": "^1.9.0-beta.59",
+    "@meshsdk/hydra": "file:/home/dunght/github/mesh/packages/mesh-hydra"
+  }
+}
