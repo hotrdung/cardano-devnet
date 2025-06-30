@@ -41,11 +41,15 @@ JSON_FILE="$TARGETDIR/cardano-node.json"
 TMP_JSON_FILE="${JSON_FILE}.tmp"
 
 # echo "Copying files from HYDRA source"
-# cp "$HYDRA_BASEDIR/demo/seed-devnet.sh" .
+cp "$HYDRA_BASEDIR/demo/seed-devnet.sh" .
+mkdir -p ./keys
+cp $HYDRA_BASEDIR/demo/*.sk ./keys
+cp $HYDRA_BASEDIR/demo/*.vk ./keys
 # # also copy .env if it does not exist in the current directory
 # if [ ! -f .env ]; then
 #   cp "$HYDRA_BASEDIR/demo/.env" .
 # fi
+
 
 # Calculate genesis hashes using appropriate cardano-cli commands
 BYRON_HASH=$(cardano-cli byron genesis print-genesis-hash --genesis-json "$TARGETDIR/genesis-byron.json")
