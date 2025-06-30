@@ -1,0 +1,7 @@
+# Generated devnet directory
+devnet/
+# Cloned hydra source
+hydra_src/
+
+# NodeJS
+node_modules/
