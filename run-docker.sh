@@ -32,6 +32,7 @@ ${DOCKER_COMPOSE_CMD} up -d postgres
 ${DOCKER_COMPOSE_CMD} up -d cardano-db-sync
 
 ${DOCKER_COMPOSE_CMD} up -d blockfrost-ryo
+${DOCKER_COMPOSE_CMD} up -d ogmios
 ${DOCKER_COMPOSE_CMD} up -d kupo
 
 echo >&2 -e "\n# Launch TUI on hydra-node-1: ${DOCKER_COMPOSE_CMD} run hydra-tui-1"
