@@ -9,9 +9,10 @@
 # inside the container, run:
 # >>>
 
-export CARDANO_NODE_SOCKET_PATH=/devnet/node.socket
+export CARDANO_NODE_SOCKET_PATH=$(pwd)/devnet/node.socket
 export CARDANO_NODE_NETWORK_ID=42
 source <(cardano-cli --bash-completion-script cardano-cli)
+sudo chown $(whoami):$(whoami) $CARDANO_NODE_SOCKET_PATH
 cardano-cli conway query protocol-parameters --out-file pparams.json
 
 
