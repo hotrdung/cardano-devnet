@@ -1,7 +1,9 @@
 #!/bin/bash
 
 docker compose down
+
 # Force remove volumes and ignore errors if they don't exist. Also fixed typo 'demno' -> 'demo'.
+echo "Removing volumes...."
 docker volume rm -f demo_db-sync-data demo_postgres demo_db-kupo || true
 
 # Find TUI containers. If any exist, stop and remove them.
@@ -11,5 +13,8 @@ if [ -n "$TUI_CONTAINERS" ]; then
   docker stop $TUI_CONTAINERS && docker rm $TUI_CONTAINERS
 fi
 
-sudo rm -rf devnet
-sudo rm -rf keys
+TARGETDIR=${TARGETDIR:-devnet}
+
+if [ -d "${TARGETDIR}" ] || [ -d "keys" ]; then
+  sudo rm -rf "$TARGETDIR" keys
+fi

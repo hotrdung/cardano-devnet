@@ -241,7 +241,7 @@ services:
 
   cardano-db-sync:
     # https://github.com/IntersectMBO/cardano-db-sync/blob/master/docker-compose.yml
-    image: ghcr.io/intersectmbo/cardano-db-sync:13.6.0.5
+    image: ghcr.io/intersectmbo/cardano-db-sync:latest
     environment:
       # For a custom network, a config file is likely required, passed via DB_SYNC_CONFIG
       - DB_SYNC_CONFIG=${DB_SYNC_CONFIG:-/dbsync-config/devnet-config.yaml}
@@ -264,6 +264,7 @@ services:
     volumes:
       - db-sync-data:/var/lib/cexplorer
       - ./devnet:/node-ipc # Mount the devnet directory (containing the socket) to /ipc
+      - ./patch/migration-4-0003-20210116.sql:/nix/store/2sjgxx8ghn4hhxvl1gj49yaidbin1mg4-schema/migration-4-0003-20210116.sql
       - ./dbsync-config:/dbsync-config
     restart: on-failure
     logging:
