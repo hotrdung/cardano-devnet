@@ -8,6 +8,9 @@ SCRIPT_DIR=$(dirname $(realpath $0))
 
 cd ${SCRIPT_DIR}
 
+TARGETDIR=${TARGETDIR:-devnet}
+# echo $TARGETDIR
+
 DOCKER_COMPOSE_CMD=
 if docker compose --version > /dev/null 2>&1; then
   DOCKER_COMPOSE_CMD="docker compose"
@@ -41,12 +44,18 @@ echo >&2 -e "\n# Launch TUI on hydra-node-1: ${DOCKER_COMPOSE_CMD} run hydra-tui
 echo >&2 -e "\n# Stop the demo: ${DOCKER_COMPOSE_CMD} down\n"
 # ${DOCKER_COMPOSE_CMD} run hydra-tui-1
 
-# # create alias `fix-db-sync`
-# alias fix-db-sync="docker exec -e PGPASSWORD=$(< dbsync-config/secrets/postgres_password) demo-postgres-1 psql -U \$(< dbsync-config/secrets/postgres_user) -d \$(< dbsync-config/secrets/postgres_db) -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE query ILIKE '%CREATE INDEX IF NOT EXISTS idx_epoch_stake_pool_id ON epoch_stake(pool_id)%' AND state = 'active';\""
+sudo chown $(whoami):$(whoami) $TARGETDIR/node.socket
+rm -f ~/node.socket
+ln -s ${SCRIPT_DIR}/${TARGETDIR}/node.socket ~/node.socket
 
-# echo >&2 -e "\n# Run this after 60s to fix DB-Sync hanging issue:"
-# echo "docker exec -e PGPASSWORD=\$(< dbsync-config/secrets/postgres_password) demo-postgres-1 psql -U \$(< dbsync-config/secrets/postgres_user) -d \$(< dbsync-config/secrets/postgres_db) -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE query ILIKE '%CREATE INDEX IF NOT EXISTS idx_epoch_stake_pool_id ON epoch_stake(pool_id)%' AND state = 'active';\""
-# echo -e "  -- OR --"
-# echo "fix-db-sync"
-# echo -e "\n\n"
+# echo this paragraph to the console:
+echo >&2 -e "\n# Run these commands to init your terminal to work with Cardano CLI:"
+echo 'export CARDANO_NODE_SOCKET_PATH=~/node.socket'
+echo 'export CARDANO_NODE_NETWORK_ID=42'
+echo 'source <(cardano-cli --bash-completion-script cardano-cli)'
 
+echo >&2 -e "\n# Watch (Ogmios):        watch -n1 'curl -s localhost:1337/health | jq'"
+echo >&2 -e "\n# Watch (Blockfrost):    watch -n1 'curl -s localhost:3000/epochs/latest | jq'"
+echo >&2 -e "\n# Inspect (Kupo) faucet: curl -s localhost:1442/matches/addr_test1vztc80na8320zymhjekl40yjsnxkcvhu58x59mc2fuwvgkc332vxv | jq '.[] | select(.spent_at == null)'"
+
+echo -e "\n\n"
