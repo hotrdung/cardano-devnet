@@ -3,10 +3,10 @@
   "update_quorum": 2,
   "max_lovelace_supply": "2000000000000",
   "network_magic": 42,
-  "epoch_length": 5,
-  "system_start": 1750049277,
+  "epoch_length": 300,
+  "startTime": 1751960996,
   "slots_per_kes_period": 129600,
-  "slot_length": 0.1,
+  "slot_length": 0.5,
   "max_kes_evolutions": 60,
   "security_param": 2160
 }

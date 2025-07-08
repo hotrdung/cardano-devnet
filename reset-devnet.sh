@@ -18,3 +18,6 @@ TARGETDIR=${TARGETDIR:-devnet}
 if [ -d "${TARGETDIR}" ] || [ -d "keys" ]; then
   sudo rm -rf "$TARGETDIR" keys
 fi
+
+BLOCKFROST_BASEDIR="blockfrost-config"
+rm $BLOCKFROST_BASEDIR/*_genesis.json
