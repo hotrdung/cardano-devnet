@@ -4,7 +4,7 @@ docker compose down
 
 # Force remove volumes and ignore errors if they don't exist. Also fixed typo 'demno' -> 'demo'.
 echo "Removing volumes...."
-docker volume rm -f demo_db-sync-data demo_postgres demo_db-kupo || true
+docker volume rm -f demo_db-sync-data demo_postgres demo_db-kupo demo_db-wallet || true
 
 # Find TUI containers. If any exist, stop and remove them.
 TUI_CONTAINERS=$(docker ps -a -q --filter "name=demo-hydra-tui-*")
@@ -20,4 +20,4 @@ if [ -d "${TARGETDIR}" ] || [ -d "keys" ]; then
 fi
 
 BLOCKFROST_BASEDIR="blockfrost-config"
-rm $BLOCKFROST_BASEDIR/*_genesis.json
+rm -f $BLOCKFROST_BASEDIR/*_genesis.json

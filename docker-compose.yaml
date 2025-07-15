@@ -341,6 +341,25 @@ services:
     networks:
       - hydra_net
 
+  cardano-wallet:
+    image: cardanofoundation/cardano-wallet:latest
+    volumes:
+      - db-wallet:/wallet-db
+      - ./devnet:/ipc
+      - ./devnet:/configs/private
+    ports:
+      - 8090:8090
+    entrypoint: []
+    command: cardano-wallet serve --node-socket /ipc/node.socket --database /wallet-db --listen-address 0.0.0.0 --testnet /configs/private/genesis-byron.json
+    # user: ${USER_ID}
+    restart: on-failure
+    logging:
+      driver: "json-file"
+      options:
+        compress: "true"
+        max-file: "10"
+        max-size: "50m"
+
 networks:
   hydra_net:
     driver: bridge
@@ -354,6 +373,7 @@ volumes:
   db-sync-data:
   postgres:
   db-kupo:
+  db-wallet:
 
 secrets:
   postgres_db:

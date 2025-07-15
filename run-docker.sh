@@ -6,6 +6,15 @@ set -e
 
 SCRIPT_DIR=$(dirname $(realpath $0))
 
+# Check for --hydra flag
+with_hydra=false
+for arg in "$@"; do
+  if [[ "$arg" == "--hydra" ]]; then
+    with_hydra=true
+    break
+  fi
+done
+
 cd ${SCRIPT_DIR}
 
 TARGETDIR=${TARGETDIR:-devnet}
@@ -30,15 +39,20 @@ fi
 ${DOCKER_COMPOSE_CMD} up -d cardano-node
 ${DOCKER_COMPOSE_CMD} up -d postgres
 
-"${SCRIPT_DIR}/seed-devnet.sh"
+if [ "$with_hydra" = true ]; then
+  echo "Running with Hydra nodes."
 
-${DOCKER_COMPOSE_CMD} up -d hydra-node-{1,2,3}
+  "${SCRIPT_DIR}/seed-devnet.sh"
+
+  ${DOCKER_COMPOSE_CMD} up -d hydra-node-{1,2,3}
+fi
 
 ${DOCKER_COMPOSE_CMD} up -d cardano-db-sync
 
 ${DOCKER_COMPOSE_CMD} up -d blockfrost-ryo
 ${DOCKER_COMPOSE_CMD} up -d ogmios
 ${DOCKER_COMPOSE_CMD} up -d kupo
+${DOCKER_COMPOSE_CMD} up -d cardano-wallet
 
 echo >&2 -e "\n# Launch TUI on hydra-node-1: ${DOCKER_COMPOSE_CMD} run hydra-tui-1"
 echo >&2 -e "\n# Stop the demo: ${DOCKER_COMPOSE_CMD} down\n"
@@ -57,5 +71,6 @@ echo 'source <(cardano-cli --bash-completion-script cardano-cli)'
 echo >&2 -e "\n# Watch (Ogmios):        watch -n1 'curl -s localhost:1337/health | jq'"
 echo >&2 -e "\n# Watch (Blockfrost):    watch -n1 'curl -s localhost:3000/epochs/latest | jq'"
 echo >&2 -e "\n# Inspect (Kupo) faucet: curl -s localhost:1442/matches/addr_test1vztc80na8320zymhjekl40yjsnxkcvhu58x59mc2fuwvgkc332vxv | jq '.[] | select(.spent_at == null)'"
+echo >&2 -e "\n# Cardano wallet:        curl -s localhost:8090/v2/network/information | jq"
 
 echo -e "\n\n"

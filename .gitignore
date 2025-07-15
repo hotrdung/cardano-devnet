@@ -7,3 +7,9 @@ keys/
 
 # NodeJS
 node_modules/
+blockfrost-config/alonzo_genesis.json
+blockfrost-config/byron_genesis.json
+blockfrost-config/conway_genesis.json
+blockfrost-config/genesis.json.bak
+blockfrost-config/shelley_genesis.json
+pparams.json

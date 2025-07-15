@@ -9,10 +9,6 @@
 # inside the container, run:
 # >>>
 
-export CARDANO_NODE_SOCKET_PATH=$(pwd)/devnet/node.socket
-export CARDANO_NODE_NETWORK_ID=42
-source <(cardano-cli --bash-completion-script cardano-cli)
-sudo chown $(whoami):$(whoami) $CARDANO_NODE_SOCKET_PATH
 cardano-cli conway query protocol-parameters --out-file pparams.json
 
 
@@ -35,8 +31,7 @@ cardano-cli query tip
 # script hash
 cardano-cli hash script --script-file stake.plutus
 # script stake address
-cardano-cli conway stake-address build --stake-script-file stake.plutus --testnet-magic 42
-
+cardano-cli conway stake-address build --stake-script-file stake.plutus
 
 # utxos by address
 cardano-cli query utxo --address $(cat /devnet/credentials/addr1)
@@ -168,20 +163,26 @@ echo -n "pokemoney" | xxd -ps
 #
 cardano-cli query protocol-parameters --out-file pparams.json
 #
-cardano-cli conway transaction build --tx-in $(cardano-cli conway query utxo --address $(< payment.addr) --output-json | jq -r 'keys[2]') --tx-out $(< payment.addr)+10000000+"9191 7414fa48f5b31f0a4ff57b05f934116540076d4b4970de3ae9ad14c1.706f6b656d6f6e6579" --mint "9191 7414fa48f5b31f0a4ff57b05f934116540076d4b4970de3ae9ad14c1.706f6b656d6f6e6579" --mint-script-file policy.script --change-address $(< payment.addr) --out-file mint-tx.raw
+cardano-cli conway transaction build \
+  --tx-in $(cardano-cli conway query utxo --address $(< payment.addr) --output-json | jq -r 'keys[2]') \
+  --tx-out $(< payment.addr)+10000000+"9191 7414fa48f5b31f0a4ff57b05f934116540076d4b4970de3ae9ad14c1.706f6b656d6f6e6579" \
+  --mint "9191 7414fa48f5b31f0a4ff57b05f934116540076d4b4970de3ae9ad14c1.706f6b656d6f6e6579" \
+  --mint-script-file policy.script \
+  --change-address $(< payment.addr) --out-file mint-tx.raw
 cardano-cli conway transaction sign --tx-file mint-tx.raw --signing-key-file policy.skey --signing-key-file payment.skey --out-file mint-tx.signed
 cardano-cli debug transaction view --tx-file mint-tx.signed
 cardano-cli conway transaction submit --tx-file mint-tx.signed
 cardano-cli query utxo --address $(< payment.addr)
 # 
 # TRANSFER >>>
-cardano-cli conway transaction calculate-min-required-utxo --protocol-params-file pparams.json --tx-out addr_test1qpuktx90cvmc0vy6qdnz9ka6t53s67wrsvnn06p5c4gf6pkecmllpm3xpffylwhj9gjztqxfer2mv7p47txj0hy22p7slc3qkg+"9100 7414fa48f5b31f0a4ff57b05f934116540076d4b4970de3ae9ad14c1.706f6b656d6f6e6579"
-cardano-cli conway transaction build
-  --tx-in 9c5cc125a15ed267b90f0142f63c4eb996498b36bb7e34641696486a394ae173#0 --tx-out addr_test1qpuktx90cvmc0vy6qdnz9ka6t53s67wrsvnn06p5c4gf6pkecmllpm3xpffylwhj9gjztqxfer2mv7p47txj0hy22p7slc3qkg+1168010+"9100 7414fa48f5b31f0a4ff57b05f934116540076d4b4970de3ae9ad14c1.706f6b656d6f6e6579" --tx-out $(< payment.addr)+8831990+"91 7414fa48f5b31f0a4ff57b05f934116540076d4b4970de3ae9ad14c1.706f6b656d6f6e6579"  --change-address $(< payment.addr) --out-file transfer.raw
-cardano-cli conway transaction build --tx-in 9c5cc125a15ed267b90f0142f63c4eb996498b36bb7e34641696486a394ae173#1 
-  --tx-in 9c5cc125a15ed267b90f0142f63c4eb996498b36bb7e34641696486a394ae173#0 --tx-out addr_test1qpuktx90cvmc0vy6qdnz9ka6t53s67wrsvnn06p5c4gf6pkecmllpm3xpffylwhj9gjztqxfer2mv7p47txj0hy22p7slc3qkg+1168010+"9100 7414fa48f5b31f0a4ff57b05f934116540076d4b4970de3ae9ad14c1.706f6b656d6f6e6579" --tx-out $(< payment.addr)+8831990+"91 7414fa48f5b31f0a4ff57b05f934116540076d4b4970de3ae9ad14c1.706f6b656d6f6e6579"  --change-address $(< payment.addr) --out-file transfer.raw
-cardano-cli conway transaction sign --signing-key-file payment.vkey --out-file transfer.signed
-cardano-cli conway transaction sign --signing-key-file payment.vkey --tx-file transfer.raw --out-file transfer.signed
+# cardano-cli conway transaction calculate-min-required-utxo --protocol-params-file pparams.json --tx-out addr_test1qpuktx90cvmc0vy6qdnz9ka6t53s67wrsvnn06p5c4gf6pkecmllpm3xpffylwhj9gjztqxfer2mv7p47txj0hy22p7slc3qkg+"9100 7414fa48f5b31f0a4ff57b05f934116540076d4b4970de3ae9ad14c1.706f6b656d6f6e6579"
+cardano-cli conway transaction build \
+  --tx-in 9c5cc125a15ed267b90f0142f63c4eb996498b36bb7e34641696486a394ae173#1 \
+  --tx-in 9c5cc125a15ed267b90f0142f63c4eb996498b36bb7e34641696486a394ae173#0 \
+  --tx-out addr_test1qpuktx90cvmc0vy6qdnz9ka6t53s67wrsvnn06p5c4gf6pkecmllpm3xpffylwhj9gjztqxfer2mv7p47txj0hy22p7slc3qkg+1168010+"9100 7414fa48f5b31f0a4ff57b05f934116540076d4b4970de3ae9ad14c1.706f6b656d6f6e6579" \
+  --tx-out $(< payment.addr)+8831990+"91 7414fa48f5b31f0a4ff57b05f934116540076d4b4970de3ae9ad14c1.706f6b656d6f6e6579" \
+  --change-address $(< payment.addr) \
+  --out-file transfer.raw
 cardano-cli conway transaction sign --tx-file transfer.raw --signing-key-file payment.skey --out-file transfer.signed
 cardano-cli conway transaction submit --tx-file transfer.signed
 cardano-cli query utxo --address $(< payment.addr)
