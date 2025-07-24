@@ -27,6 +27,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    networks:
+      - hydra_net
     logging:
       driver: "json-file"
       options:
@@ -300,7 +302,18 @@ services:
       # - ./devnet/db:/db
     ports:
       - ${OGMIOS_PORT:-1337}:1337
-    
+    depends_on:
+      cardano-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "ogmios", "health-check"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - hydra_net
+
   # mesh-app:
   #   build:
   #     context: .
@@ -353,12 +366,161 @@ services:
     command: cardano-wallet serve --node-socket /ipc/node.socket --database /wallet-db --listen-address 0.0.0.0 --testnet /configs/private/genesis-byron.json
     # user: ${USER_ID}
     restart: on-failure
+    depends_on:
+      cardano-node:
+        condition: service_healthy
     logging:
       driver: "json-file"
       options:
         compress: "true"
         max-file: "10"
         max-size: "50m"
+    networks:
+      - hydra_net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - hydra_net
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 2181 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - hydra_net
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/bin/kafka-topics --bootstrap-server localhost:29092 --list"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  tx-watcher-mysql:
+    image: mysql:8
+    restart: on-failure
+    environment:
+      MYSQL_DATABASE: ${TX_WATCHER_MYSQL_DATABASE:-cnio_blockchain_watcher}
+      MYSQL_USER: ${TX_WATCHER_MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${TX_WATCHER_MYSQL_PASSWORD:-password}
+      MYSQL_ROOT_PASSWORD: ${TX_WATCHER_MYSQL_ROOT_PASSWORD:-rootpassword}
+    ports:
+      - "${TX_WATCHER_MYSQL_PORT:-13306}:3306"
+    volumes:
+      - mysql-tx-watcher:/var/lib/mysql
+    networks:
+      - hydra_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${TX_WATCHER_MYSQL_USER:-user}", "--password=${TX_WATCHER_MYSQL_PASSWORD:-password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  tx-watcher-migration:
+    image: ${TX_WATCHER_IMAGE:-}
+    command: [ "/rpc/bin/rpc-runtime", "migrate", "up" ]
+    restart: on-failure
+    depends_on:
+      tx-watcher-mysql:
+        condition: service_healthy
+    environment:
+      - MYSQL__HOST=tx-watcher-mysql
+      - MYSQL__PORT=3306
+      - MYSQL__DATABASE=${TX_WATCHER_MYSQL_DATABASE:-cnio_blockchain_watcher}
+      - MYSQL__USERNAME=${TX_WATCHER_MYSQL_USER:-user}
+      - MYSQL__PASSWORD=${TX_WATCHER_MYSQL_PASSWORD:-password}
+    networks:
+      - hydra_net
+
+  tx-watcher-seeding:
+    image: mysql:8
+    command: >
+      /bin/sh -c "
+        if [ ! -f /var/lib/mysql/seeded.flag ]; then
+          echo 'Seeding database...'
+          mysql --host=tx-watcher-mysql --user=${TX_WATCHER_MYSQL_USER:-user} --database=${TX_WATCHER_MYSQL_DATABASE:-cnio_blockchain_watcher} -e 'source /config/tx-watcher-config.sql' && \
+          touch /var/lib/mysql/seeded.flag
+        else
+          echo 'Database already seeded. Skipping.'
+        fi
+      "
+    restart: "no"
+    depends_on:
+      tx-watcher-migration:
+        condition: service_completed_successfully
+    volumes:
+      - ./tx-watcher-config.sql:/config/tx-watcher-config.sql:ro
+      - mysql-tx-watcher:/var/lib/mysql
+    environment:
+      - MYSQL_PWD=${TX_WATCHER_MYSQL_PASSWORD:-password}
+    networks:
+      - hydra_net
+
+  tx-watcher:
+    image: ${TX_WATCHER_IMAGE:-}
+    restart: on-failure
+    depends_on:
+      ogmios:
+        condition: service_healthy
+      tx-watcher-seeding:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    environment:
+      - OGMIOS_URL=ws://ogmios:1337
+      - MYSQL__HOST=tx-watcher-mysql
+      - MYSQL__PORT=3306
+      - MYSQL__DATABASE=${TX_WATCHER_MYSQL_DATABASE:-cnio_blockchain_watcher}
+      - MYSQL__USERNAME=${TX_WATCHER_MYSQL_USER:-user}
+      - MYSQL__PASSWORD=${TX_WATCHER_MYSQL_PASSWORD:-password}
+      - KAFKA_BROKERS=kafka:29092
+      - CACHE__EVENT_CONFIGS__TTL=300s
+      - CACHE__EVENT_CONFIGS__LIFE_TTL=240s
+      - CACHE__EVENT_CONFIGS__SHARDS=1024
+      - CACHE__POLICY_ID_CONFIGS__TTL=300s
+      - CACHE__POLICY_ID_CONFIGS__LIFE_TTL=240s
+      - CACHE__POLICY_ID_CONFIGS__SHARDS=1024
+      - CARDANO_NETWORK_ID=42
+      - CARDANO_CHAIN_NAME=Devnet
+      # - BLOCK_START_SLOT=0
+      # - BLOCK_START_EPOCH_TIME=
+      # - NETWORK_SLOT_ZERO_TIME='1666656000000'
+      # - NETWORK_SLOT_ZERO='0'
+      # - NETWORK_SLOT_LENGTH='1000'
+      - NETWORK_MAGIC=42
+      - FILTER_TYPE=DEFAULT
+      - SHOULD_USE_OGMIOS_V6=true
+      - IS_WATCHER_ENABLED=true
+      - OPTIM_BFF_API_KEY=bf6ad7b7a0131b91
+      - BOND_DEX_PUBLISH_TOPIC=bond-dex-tx-publisher
+      - DAO_TXN_PUBLISH_TOPIC=dao-drep-txns-publisher
+      - DREP_CERTIFICATE_FILTERS=delegateRepresentativeRetirement,stakeDelegation,delegateRepresentativeRegistration,delegateRepresentativeUpdate
+      - ENV=development
+      - IS_SQL_LOG=false
+      - SPENT_OUT_REF_RETENTION_PERIOD=15
+      - TRANSACTION_EVENT_SCHEMA_NAME=nio_v1_watcher_transaction_events
+    networks:
+      - hydra_net
 
 networks:
   hydra_net:
@@ -374,6 +536,8 @@ volumes:
   postgres:
   db-kupo:
   db-wallet:
+  mysql-tx-watcher:
+  kafka-data:
 
 secrets:
   postgres_db:

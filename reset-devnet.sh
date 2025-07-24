@@ -4,7 +4,7 @@ docker compose down
 
 # Force remove volumes and ignore errors if they don't exist. Also fixed typo 'demno' -> 'demo'.
 echo "Removing volumes...."
-docker volume rm -f demo_db-sync-data demo_postgres demo_db-kupo demo_db-wallet || true
+docker volume rm -f demo_db-sync-data demo_postgres demo_db-kupo demo_db-wallet demo_kafka-data demo_mysql-tx-watcher || true
 
 # Find TUI containers. If any exist, stop and remove them.
 TUI_CONTAINERS=$(docker ps -a -q --filter "name=demo-hydra-tui-*")
