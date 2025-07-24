@@ -6,6 +6,11 @@ set -e
 
 SCRIPT_DIR=$(dirname $(realpath $0))
 
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  echo "Reading configuration from .env file."
+  source "$SCRIPT_DIR/.env"
+fi
+
 # Check for --hydra flag
 with_hydra=false
 for arg in "$@"; do
@@ -54,10 +59,14 @@ ${DOCKER_COMPOSE_CMD} up -d ogmios
 ${DOCKER_COMPOSE_CMD} up -d kupo
 ${DOCKER_COMPOSE_CMD} up -d cardano-wallet
 
-${DOCKER_COMPOSE_CMD} up -d tx-watcher-mysql
-${DOCKER_COMPOSE_CMD} up -d zookeeper kafka
-${DOCKER_COMPOSE_CMD} up -d tx-watcher-seeding
-${DOCKER_COMPOSE_CMD} up -d tx-watcher
+if [ -n "${TX_WATCHER_IMAGE}" ]; then
+  echo "TX_WATCHER_IMAGE is set, starting tx-watcher and its dependencies..."
+  ${DOCKER_COMPOSE_CMD} up -d tx-watcher-mysql
+  ${DOCKER_COMPOSE_CMD} up -d zookeeper kafka tx-watcher-seeding
+  ${DOCKER_COMPOSE_CMD} up -d tx-watcher
+else
+  echo "TX_WATCHER_IMAGE is not set, skipping tx-watcher services."
+fi
 
 echo >&2 -e "\n# Launch TUI on hydra-node-1: ${DOCKER_COMPOSE_CMD} run hydra-tui-1"
 echo >&2 -e "\n# Stop the demo: ${DOCKER_COMPOSE_CMD} down\n"

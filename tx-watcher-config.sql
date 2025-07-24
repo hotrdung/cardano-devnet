@@ -1,9 +1,9 @@
 
-insert into ogmios_checkpoints (hash, block_no, slot, filter_type) values 
-('28f136a8fecf188fcbce7c69711a9aa03ed69c4c15828746d00cb0cbe2de29c1', 10769480, 133423449, 'DEFAULT'),
-('28f136a8fecf188fcbce7c69711a9aa03ed69c4c15828746d00cb0cbe2de29c1', 10769480, 133423449, 'CERTIFICATES'),
-('28f136a8fecf188fcbce7c69711a9aa03ed69c4c15828746d00cb0cbe2de29c1', 10769480, 133423449, 'PROPOSALS'),
-('28f136a8fecf188fcbce7c69711a9aa03ed69c4c15828746d00cb0cbe2de29c1', 10769480, 133423449, 'VOTES');
+-- insert into ogmios_checkpoints (hash, block_no, slot, filter_type) values 
+-- ('28f136a8fecf188fcbce7c69711a9aa03ed69c4c15828746d00cb0cbe2de29c1', 10769480, 133423449, 'DEFAULT'),
+-- ('28f136a8fecf188fcbce7c69711a9aa03ed69c4c15828746d00cb0cbe2de29c1', 10769480, 133423449, 'CERTIFICATES'),
+-- ('28f136a8fecf188fcbce7c69711a9aa03ed69c4c15828746d00cb0cbe2de29c1', 10769480, 133423449, 'PROPOSALS'),
+-- ('28f136a8fecf188fcbce7c69711a9aa03ed69c4c15828746d00cb0cbe2de29c1', 10769480, 133423449, 'VOTES');
 
 
 INSERT INTO api_keys (api_key,service_name,msg_type) VALUES
